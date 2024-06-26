@@ -1,13 +1,16 @@
 name: Post Article to Dev.to
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+on:
+  push:
+    branches:
+      - main
+
 jobs:
-  Explore-GitHub-Actions:
+  post-article:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-  
+
       - name: Extract article metadata and content
         id: extract_article
         run: |
@@ -15,22 +18,22 @@ jobs:
           TAGS=$(awk -F': ' '/^tags:/ {print $2}' article.md | sed 's/\[//g' | sed 's/\]//g' | sed 's/, /", "/g' | sed 's/^/["/' | sed 's/$/"]/')
           PUBLISHED=$(awk -F': ' '/^published:/ {print $2}' article.md)
           BODY=$(sed -n '/^---$/,/^---$/!p' article.md | sed '1d' | sed '2d')
-  
+
           echo "::set-output name=title::$TITLE"
           echo "::set-output name=tags::$TAGS"
           echo "::set-output name=published::$PUBLISHED"
           echo "::set-output name=body::$BODY"
-  
+
       - name: Post Article to DEV.to
         env:
           API_KEY: ${{ secrets.DEV_TO_API_KEY }}
         run: |
-          TITLE=${{ steps.extract_article.outputs.title }}
-          TAGS=${{ steps.extract_article.outputs.tags }}
-          PUBLISHED=${{ steps.extract_article.outputs.published }}
-          BODY=${{ steps.extract_article.outputs.body }}
-  
+          TITLE="${{ steps.extract_article.outputs.title }}"
+          TAGS="${{ steps.extract_article.outputs.tags }}"
+          PUBLISHED="${{ steps.extract_article.outputs.published }}"
+          BODY="${{ steps.extract_article.outputs.body }}"
+
           curl -X POST -H "Content-Type: application/json" \
-          -H "api-key: $API_KEY" \
-          -d '{"article":{"title":"'"$TITLE"'","body_markdown":"'"$BODY"'","published":'"$PUBLISHED"',"tags":'"$TAGS"'}}' \
-          https://dev.to/api/articles
+            -H "api-key: $API_KEY" \
+            -d '{"article":{"title":"'"$TITLE"'","body_markdown":"'"$BODY"'","published":'"$PUBLISHED"',"tags":'"$TAGS"'}}' \
+            https://dev.to/api/articles
