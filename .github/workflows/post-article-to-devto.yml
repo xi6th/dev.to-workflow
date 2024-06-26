@@ -31,7 +31,7 @@ jobs:
 
       - name: Post Article to DEV.to
         env:
-          API_KEY: ${{DEV_TO_API_KEY}}
+          API_KEY: ${{ secrets.DEV_TO_API_KEY }}
         run: |
           TITLE="${{ steps.extract_article.outputs.title }}"
           TAGS="${{ steps.extract_article.outputs.tags }}"
