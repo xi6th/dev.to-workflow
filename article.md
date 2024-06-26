@@ -4,7 +4,7 @@ tags: ["discuss", "javascript"]
 published: false
 ---
 
-This is the test for the API.
+This is the test for the API for all files.
 
 ![Sample Image](https://example.com/image.jpg)
 
