@@ -32,6 +32,6 @@ jobs:
       uses: sinedied/publish-devto@v2
       with:
         files: 'posts/**/*.md'
-        devto_key: ${{ secrets.DEVTO_TOKEN }}
+        devto_key: ${{ secrets.DEV_TO_API_KEY }}
         github_token: ${{ secrets.TOKEN }}
         conventional_commits: true
