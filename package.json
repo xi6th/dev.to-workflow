@@ -1,0 +1,19 @@
+{
+"name": "dev.to",
+"repository": {
+    "type": "git"
+},
+"scripts": {
+    "prettier": "prettier",
+    "embedme": "embedme 2024/**/**/*.md",
+    "prettier:base": "yarn run prettier \"**/*.{js,json,scss,md,ts,html,component.html}\"",
+    "prettier:write": "yarn run prettier:base --write",
+    "prettier:check": "yarn run prettier:base --list-different",
+    "embedme:check": "yarn run embedme --verify",
+    "embedme:write": "yarn run embedme"
+},
+"dependencies": {
+    "embedme": "1.22.1",
+    "prettier": "3.2.5"
+}
+}
