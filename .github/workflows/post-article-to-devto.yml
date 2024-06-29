@@ -15,13 +15,9 @@ jobs:
       - name: Extract article metadata and content
         id: extract_article
         run: |
-          # Read TITLE from article.md
           TITLE=$(awk -F': ' '/^title:/ {print $2}' article.md | sed 's/"//g')
-          # Read TAGS from article.md and format as JSON array
           TAGS=$(awk -F': ' '/^tags:/ {print $2}' article.md | sed 's/\[//g' | sed 's/\]//g' | sed 's/, /", "/g' | sed 's/^/["/' | sed 's/$/"]/')
-          # Read PUBLISHED from article.md
           PUBLISHED=$(awk -F': ' '/^published:/ {print $2}' article.md)
-          # Read BODY from article.md excluding YAML front matter
           BODY=$(sed -n '/^---$/,/^---$/!p' article.md | sed '1d' | sed '2d')
 
           echo "TITLE: $TITLE"
