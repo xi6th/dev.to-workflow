@@ -1,51 +1,37 @@
-name: Post Article to Dev.to
-
-on:
+name: publish to Dev.to
+on:   
   push:
-    branches:
-      - main
+    paths:
+      - 'posts/**/**.md' # Path for community timeline
+      - 'posts/**/**/**.md' # Path for all posts (yearly)
 
 jobs:
-  post-article:
+  publish:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+    - name: Checkout Repo
+      uses: actions/checkout@v4.1.6
 
-      - name: Extract article metadata and content
-        id: extract_article
-        run: |
-          TITLE=$(awk -F': ' '/^title:/ {print $2}' api.md | sed 's/"//g')
-          TAGS=$(awk -F': ' '/^tags:/ {print $2}' api.md | sed 's/\[//g' | sed 's/\]//g' | sed 's/, /", "/g' | sed 's/^/["/' | sed 's/$/"]/')
-          PUBLISHED=$(awk -F': ' '/^published:/ {print $2}' api.md)
-          BODY=$(sed -n '/^---$/,/^---$/!p' api.md | sed '1d' | sed '2d')
+    - name: Setup Node
+      uses: actions/setup-node@v4.0.2
+      with:
+        node-version: 14
 
-          echo "TITLE: $TITLE"
-          echo "TAGS: $TAGS"
-          echo "PUBLISHED: $PUBLISHED"
-          echo "BODY: $BODY"
+    - name: Install Dependencies
+      uses: bahmutov/npm-install@v1.10.2
 
-          echo "::set-output name=title::$TITLE"
-          echo "::set-output name=tags::$TAGS"
-          echo "::set-output name=published::$PUBLISHED"
-          echo "::set-output name=body::$BODY"
+    - name: Run Prettier (Write)
+      run: yarn run prettier:write
 
-      - name: Post Article to DEV.to
-        env:
-          API_KEY: ${{ secrets.DEV_TO_API_KEY }}
-        run: |
-          TITLE="${{ steps.extract_article.outputs.title }}"
-          TAGS="${{ steps.extract_article.outputs.tags }}"
-          PUBLISHED="${{ steps.extract_article.outputs.published }}"
-          BODY="${{ steps.extract_article.outputs.body }}"
+    - name: Run Embedme (Write)
+      run: yarn run embedme:write
 
-          echo "Posting article to DEV.to..."
-          echo "TITLE: $TITLE"
-          echo "TAGS: $TAGS"
-          echo "PUBLISHED: $PUBLISHED"
-          echo "BODY: $BODY"
-
-          curl -X POST -H "Content-Type: application/json" \
-            -H "api-key: $API_KEY" \
-            -d '{"article":{"title":"'"$TITLE"'","body_markdown":"'"$BODY"'","published":'"$PUBLISHED"',"tags":'"$TAGS"'}}' \
-            https://dev.to/api/articles
+    - name: Publish articles on dev.to
+      continue-on-error: true
+      uses: sinedied/publish-devto@v2
+      with:
+        files: 'posts/**/*.md'
+        devto_key: ${{ secrets.DEV_TO_API_KEY }}
+        github_token: ${{ secrets.TOKEN }}
+        conventional_commits: true
