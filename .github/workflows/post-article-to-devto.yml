@@ -1,23 +1,24 @@
-name: Post Article to Dev.to
+name: Publish to Dev.to
 
-on:
+on:   
   push:
-    branches:
-      - main
+    paths:
+      - 'posts/**/**.md'  # Path for community timeline
+      - 'posts/**/**/**.md'  # Path for all posts (yearly)
 
 jobs:
-  post-article:
+  publish:
     runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
 
-    - name: Post article to Dev.to
-      run: |
-        curl -X POST -H "Content-Type: application/json" \
-            -H "api-key: ${{ secrets.DEV_TO_API_KEY }}" \
-            -d '{"article":{"title":"Title","body_markdown":"Body","published":false,"tags":["discuss", "javascript"]}}' \
-            https://dev.to/api/articles
-      env:
-        DEVTO_API_KEY: ${{ secrets.DEV_TO_API_KEY }}
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4.1.6
+
+    - name: Publish articles on dev.to
+      continue-on-error: true
+      uses: sinedied/publish-devto@v2
+      with:
+        files: 'posts/**/*.md'
+        devto_key: ${{ secrets.DEV_TO_API_KEY }}
+        github_token: ${{ secrets.TOKEN }}
+        conventional_commits: true
