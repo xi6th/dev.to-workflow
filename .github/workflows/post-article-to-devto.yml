@@ -5,8 +5,8 @@ on:
     branches:
       - main
     paths:
-      - "posts/**.md"
-      - "posts/**/**.md"
+      - 'posts/**.md'
+      - 'posts/**/**.md'
 
 jobs:
   publish:
@@ -23,6 +23,18 @@ jobs:
 
     - name: Install Dependencies
       run: yarn install
+
+    - name: Install yq and jq
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y yq jq
+
+    - name: List files in posts directory
+      run: |
+        echo "Listing files in the posts directory:"
+        ls posts
+        echo "Listing files in subdirectories of posts:"
+        find posts -type f -name "*.md"
 
     - name: Read markdown file and extract front matter
       id: read-file
@@ -50,7 +62,14 @@ jobs:
 
     - name: Post article to Dev.to
       run: |
-        json_payload=$(jq -n --arg title "${{ steps.read-file.outputs.title }}" --arg body_markdown "${{ steps.read-file.outputs.body }}" --argjson tags "${{ steps.read-file.outputs.tags }}" --arg published "${{ steps.read-file.outputs.published }}" '{article: {title: $title, body_markdown: $body_markdown, published: ($published == "true"), tags: $tags}}')
+        json_payload=$(jq -n \
+          --arg title "${{ steps.read-file.outputs.title }}" \
+          --arg body_markdown "${{ steps.read-file.outputs.body }}" \
+          --argjson tags "${{ steps.read-file.outputs.tags }}" \
+          --arg published "${{ steps.read-file.outputs.published }}" \
+          '{article: {title: $title, body_markdown: $body_markdown, published: ($published == "true"), tags: $tags}}')
+
+        echo "JSON payload: $json_payload"
 
         curl -X POST -H "Content-Type: application/json" \
             -H "api-key: ${{ secrets.DEV_TO_API_KEY }}" \
