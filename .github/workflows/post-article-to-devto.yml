@@ -1,37 +1,55 @@
-name: publish to Dev.to
-on:   
+name: Post ai to Dev.to
+
+on:
   push:
-    paths:
-      - 'posts/**/**.md' # Path for community timeline
-      - 'posts/**/**/**.md' # Path for all posts (yearly)
+    branches:
+      - main
 
 jobs:
-  publish:
+  post-ai:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v4.1.6
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Setup Node
-      uses: actions/setup-node@v4.0.2
-      with:
-        node-version: 14
+      - name: Extract ai metadata and content
+        id: extract_ai
+        run: |
+          # Read TITLE from ai.md
+          TITLE=$(awk -F': ' '/^title:/ {print $2}' ai.md | sed 's/"//g')
+          # Read TAGS from ai.md and format as JSON array
+          TAGS=$(awk -F': ' '/^tags:/ {print $2}' ai.md | sed 's/\[//g' | sed 's/\]//g' | sed 's/, /", "/g' | sed 's/^/["/' | sed 's/$/"]/')
+          # Read PUBLISHED from ai.md
+          PUBLISHED=$(awk -F': ' '/^published:/ {print $2}' ai.md)
+          # Read BODY from ai.md excluding YAML front matter
+          BODY=$(sed -n '/^---$/,/^---$/!p' ai.md | sed '1d' | sed '2d')
 
-    - name: Install Dependencies
-      uses: bahmutov/npm-install@v1.10.2
+          echo "TITLE: $TITLE"
+          echo "TAGS: $TAGS"
+          echo "PUBLISHED: $PUBLISHED"
+          echo "BODY: $BODY"
 
-    - name: Run Prettier (Write)
-      run: yarn run prettier:write
+          echo "::set-output name=title::$TITLE"
+          echo "::set-output name=tags::$TAGS"
+          echo "::set-output name=published::$PUBLISHED"
+          echo "::set-output name=body::$BODY"
 
-    - name: Run Embedme (Write)
-      run: yarn run embedme:write
+      - name: Post ai to DEV.to
+        env:
+          API_KEY: ${{ secrets.DEV_TO_API_KEY }}
+        run: |
+          TITLE="${{ steps.extract_ai.outputs.title }}"
+          TAGS="${{ steps.extract_ai.outputs.tags }}"
+          PUBLISHED="${{ steps.extract_ai.outputs.published }}"
+          BODY="${{ steps.extract_ai.outputs.body }}"
 
-    - name: Publish articles on dev.to
-      continue-on-error: true
-      uses: sinedied/publish-devto@v2
-      with:
-        files: 'posts/**/*.md'
-        devto_key: ${{ secrets.DEV_TO_API_KEY }}
-        github_token: ${{ secrets.TOKEN }}
-        conventional_commits: true
+          echo "Posting ai to DEV.to..."
+          echo "TITLE: $TITLE"
+          echo "TAGS: $TAGS"
+          echo "PUBLISHED: $PUBLISHED"
+          echo "BODY: $BODY"
+
+          curl -X POST -H "Content-Type: application/json" \
+            -H "api-key: $API_KEY" \
+            -d '{"ai":{"title":"'"$TITLE"'","body_markdown":"'"$BODY"'","published":'"$PUBLISHED"',"tags":'"$TAGS"'}}' \
+            https://dev.to/api/ais
