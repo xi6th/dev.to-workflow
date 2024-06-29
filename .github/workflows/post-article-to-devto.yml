@@ -1,33 +1,30 @@
-name: Publish to Dev.to
+name: Post Article to Dev.to
 
 on:
   push:
     branches:
       - main
-    paths:
-      - 'posts/**/**.md'  # Path for community timeline
-      - 'posts/**/**/**.md'  # Path for all posts (yearly)
 
 jobs:
-  publish:
+  post-article:
     runs-on: ubuntu-latest
-
+    
     steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v4.1.6
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-    - name: List files in posts directory
+    - name: Read markdown file
+      id: read-file
       run: |
-        echo "Listing files in the posts directory:"
-        ls posts || echo "No files found in posts directory."
-        echo "Listing files in subdirectories of posts:"
-        find posts -type f -name "*.md" || echo "No markdown files found."
+        file_content=$(cat posts/article.md)
+        file_content_json=$(jq -Rs '.' <<< "$file_content")
+        echo "::set-output name=content::$file_content_json"
 
-    - name: Publish articles on dev.to
-      continue-on-error: true
-      uses: sinedied/publish-devto@v2
-      with:
-        files: 'posts/**/*.md'
-        devto_key: ${{ secrets.DEV_TO_API_KEY }}
-        github_token: ${{ secrets.TOKEN }}
-        conventional_commits: true
+    - name: Post article to Dev.to
+      run: |
+        curl -X POST -H "Content-Type: application/json" \
+            -H "api-key: ${{ secrets.DEV_TO_API_KEY }}" \
+            -d '{"article":{"title":"Your Article Title","body_markdown":${{ steps.read-file.outputs.content}},"published":false,"tags":["discuss", "javascript"]}}' \
+            https://dev.to/api/articles
+      env:
+        DEVTO_API_KEY: ${{ secrets.DEV_TO_API_KEY }}
