@@ -1,35 +1,41 @@
-name: Post Article to Dev.to
-
+name: publish to Dev.to
 on:
   push:
     branches:
       - main
+    paths:
+      - "posts/**.md"
+      - "posts/**/**.md"
 
 jobs:
-  post-article:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout Repo
+        uses: actions/checkout@v4.1.6
 
-    - name: Read markdown file
-      id: read-file
-      run: |
-        file_content=$(cat posts/article.md)
-        # Escape the file content for JSON
-        file_content_json=$(jq -Rs '.' <<< "$file_content")
-        echo "::set-output name=content::$file_content_json"
+      - name: Setup Node
+        uses: actions/setup-node@v4.0.2
+        with:
+          node-version: 14
 
-    - name: Post article to Dev.to
-      run: |
-        # Construct the JSON payload
-        json_payload=$(jq -n --arg title "Your Article Title" --arg body_markdown ${{ steps.read-file.outputs.content }} --argjson tags '["discuss", "javascript"]' '{article: {title: $title, body_markdown: $body_markdown, published: false, tags: $tags}}')
+      - name: Install Dependencies
+        uses: bahmutov/npm-install@v1.10.2
 
-        # Make the POST request
-        curl -X POST -H "Content-Type: application/json" \
-            -H "api-key: ${{ secrets.DEV_TO_API_KEY }}" \
-            -d "$json_payload" \
-            https://dev.to/api/articles
-      env:
-        DEVTO_API_KEY: ${{ secrets.DEV_TO_API_KEY }}
+      - name: Run Prettier (Write)
+        run: yarn run prettier:write
+        env:
+          DEVTO_API_KEY: ${{ secrets.DEV_TO_API_KEY }}
+
+      - name: Run Embedme (Write)
+        run: yarn run embedme:write
+
+      - name: Publish articles on dev.to
+        continue-on-error: true
+        uses: sinedied/publish-devto@v2
+        with:
+          files: "posts/**/*.md"
+          devto_key: ${{ secrets.DEV_TO_API_KEY }}
+          github_token: ${{ secrets.TOKEN }}
+          conventional_commits: true
