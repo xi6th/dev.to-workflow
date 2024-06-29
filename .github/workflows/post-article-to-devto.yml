@@ -1,19 +1,16 @@
-name: Publish to Dev.to
-
-on:
+name: publish to Dev.to
+on:   
   push:
-    branches:
-      - main
     paths:
-      - 'posts/**.md'
-      - 'posts/**/**.md'
+      - 'posts/**/**.md' # Path for community timeline
+      - 'posts/**/**/**.md' # Path for all posts (yearly)
 
 jobs:
   publish:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout Repo
       uses: actions/checkout@v4.1.6
 
     - name: Setup Node
@@ -22,58 +19,19 @@ jobs:
         node-version: 14
 
     - name: Install Dependencies
-      run: yarn install
+      uses: bahmutov/npm-install@v1.10.2
 
-    - name: Install yq and jq
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y yq jq
+    - name: Run Prettier (Write)
+      run: yarn run prettier:write
 
-    - name: List files in posts directory
-      run: |
-        echo "Listing files in the posts directory:"
-        ls posts
-        echo "Listing files in subdirectories of posts:"
-        find posts -type f -name "*.md"
+    - name: Run Embedme (Write)
+      run: yarn run embedme:write
 
-    - name: Read markdown file and extract front matter
-      id: read-file
-      run: |
-        file_path=$(find posts -name "*.md" | head -n 1)
-        echo "Processing file: $file_path"
-        
-        # Extract the front matter and body content
-        front_matter=$(sed -n '/^---$/,/^---$/p' "$file_path")
-        body_content=$(sed -e '1,/^---$/d' -e '/^---$/d' "$file_path")
-        
-        # Extract individual front matter fields using yq
-        title=$(echo "$front_matter" | yq e '.title' -)
-        published=$(echo "$front_matter" | yq e '.published' -)
-        tags=$(echo "$front_matter" | yq e '.tags' - | jq -R -s -c 'split(", ")')
-        
-        # Escape the body content for JSON
-        body_content_json=$(jq -Rs '.' <<< "$body_content")
-        
-        # Output the extracted fields
-        echo "::set-output name=title::$title"
-        echo "::set-output name=published::$published"
-        echo "::set-output name=tags::$tags"
-        echo "::set-output name=body::$body_content_json"
-
-    - name: Post article to Dev.to
-      run: |
-        json_payload=$(jq -n \
-          --arg title "${{ steps.read-file.outputs.title }}" \
-          --arg body_markdown "${{ steps.read-file.outputs.body }}" \
-          --argjson tags "${{ steps.read-file.outputs.tags }}" \
-          --arg published "${{ steps.read-file.outputs.published }}" \
-          '{article: {title: $title, body_markdown: $body_markdown, published: ($published == "true"), tags: $tags}}')
-
-        echo "JSON payload: $json_payload"
-
-        curl -X POST -H "Content-Type: application/json" \
-            -H "api-key: ${{ secrets.DEV_TO_API_KEY }}" \
-            -d "$json_payload" \
-            https://dev.to/api/articles
-      env:
-        DEV_TO_API_KEY: ${{ secrets.DEV_TO_API_KEY }}
+    - name: Publish articles on dev.to
+      continue-on-error: true
+      uses: sinedied/publish-devto@v2
+      with:
+        files: 'posts/**/*.md'
+        devto_key: ${{ secrets.DEV_TO_API_KEY }}
+        github_token: ${{ secrets.TOKEN }}
+        conventional_commits: true
