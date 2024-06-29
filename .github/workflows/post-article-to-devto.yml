@@ -8,7 +8,7 @@ on:
 jobs:
   post-article:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
@@ -17,14 +17,19 @@ jobs:
       id: read-file
       run: |
         file_content=$(cat posts/article.md)
+        # Escape the file content for JSON
         file_content_json=$(jq -Rs '.' <<< "$file_content")
         echo "::set-output name=content::$file_content_json"
 
     - name: Post article to Dev.to
       run: |
+        # Construct the JSON payload
+        json_payload=$(jq -n --arg title "Your Article Title" --arg body_markdown ${{ steps.read-file.outputs.content }} --argjson tags '["discuss", "javascript"]' '{article: {title: $title, body_markdown: $body_markdown, published: false, tags: $tags}}')
+
+        # Make the POST request
         curl -X POST -H "Content-Type: application/json" \
             -H "api-key: ${{ secrets.DEV_TO_API_KEY }}" \
-            -d '{"article":{"title":"Your Article Title","body_markdown":${{ steps.read-file.outputs.content}},"published":false,"tags":["discuss", "javascript"]}}' \
+            -d "$json_payload" \
             https://dev.to/api/articles
       env:
         DEVTO_API_KEY: ${{ secrets.DEV_TO_API_KEY }}
