@@ -1,7 +1,9 @@
 name: Publish to Dev.to
 
-on:   
+on:
   push:
+    branches:
+      - main
     paths:
       - 'posts/**/**.md'  # Path for community timeline
       - 'posts/**/**/**.md'  # Path for all posts (yearly)
@@ -17,9 +19,9 @@ jobs:
     - name: List files in posts directory
       run: |
         echo "Listing files in the posts directory:"
-        ls posts
+        ls posts || echo "No files found in posts directory."
         echo "Listing files in subdirectories of posts:"
-        find posts -type f -name "*.md"
+        find posts -type f -name "*.md" || echo "No markdown files found."
 
     - name: Publish articles on dev.to
       continue-on-error: true
