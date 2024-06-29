@@ -3,6 +3,7 @@
 "repository": {
     "type": "git"
 },
+
 "scripts": {
     "prettier": "prettier",
     "embedme": "embedme 2024/**/**/*.md",
