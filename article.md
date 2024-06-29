@@ -1,5 +1,5 @@
 ---
-title: "Title"
+title: "Tesing Github workflow"
 tags: ["discuss", "javascript"]
 published: false
 ---
