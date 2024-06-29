@@ -17,7 +17,7 @@ jobs:
       run: |
         curl -X POST -H "Content-Type: application/json" \
             -H "api-key: ${{ secrets.DEV_TO_API_KEY }}" \
-            -d @/tmp/devtoArticle.md \
+            -d '{"article":{"title":"Title","body_markdown":"Body","published":false,"tags":["discuss", "javascript"]}}' \
             https://dev.to/api/articles
       env:
         DEVTO_API_KEY: ${{ secrets.DEV_TO_API_KEY }}
